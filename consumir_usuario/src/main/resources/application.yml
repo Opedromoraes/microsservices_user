@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: consumir_usuario
+server:
+  port: 8090
+
+usuario:
+  service:
+    url: ${USUARIO_SERVICE_URL:http://localhost:8080}

@@ -12,7 +12,7 @@
 	<artifactId>consumir_usuario</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>consumir_usuario</name>
-	<description>Demo project for Spring Boot</description>
+	<description>Gateway-style client that forwards user operations to the usuario service</description>
 	<url/>
 	<licenses>
 		<license/>
@@ -40,11 +40,6 @@
 			<artifactId>spring-boot-devtools</artifactId>
 			<scope>runtime</scope>
 			<optional>true</optional>
-		</dependency>
-		<dependency>
-			<groupId>org.postgresql</groupId>
-			<artifactId>postgresql</artifactId>
-			<scope>runtime</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>

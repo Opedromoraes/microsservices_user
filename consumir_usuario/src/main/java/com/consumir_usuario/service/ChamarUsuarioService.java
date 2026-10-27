@@ -1,82 +1,58 @@
 package com.consumir_usuario.service;
 
 import com.consumir_usuario.api.controller.request.ChamarUsuarioRequest;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import org.springframework.web.client.RestClient;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class ChamarUsuarioService {
 
-    public String consumirCriarUsuario(ChamarUsuarioRequest request) throws URISyntaxException, IOException, InterruptedException {
-        log.info("Chamando serviço criar usuario");
+    private final RestClient restClient;
 
-        var mapper = new ObjectMapper();
-        var requestBody = mapper.writeValueAsString(request);
-
-        HttpClient client = HttpClient.newHttpClient();
-        HttpRequest httpRequest = HttpRequest.newBuilder()
-                .uri(new URI("http://localhost:8080/usuario/criarUsuario"))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                .build();
-
-        HttpResponse<String> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
-        return response.body();
+    public ChamarUsuarioService(RestClient.Builder builder, @Value("${usuario.service.url}") String usuarioServiceUrl) {
+        this.restClient = builder.baseUrl(usuarioServiceUrl).build();
     }
 
-    public String consumirBuscarUsuario(Long id) throws IOException, InterruptedException, URISyntaxException {
-        log.info("Chamando serviço buscar usuario");
-
-        HttpClient client = HttpClient.newHttpClient();
-        HttpRequest httpRequest = HttpRequest.newBuilder()
-                .uri(new URI("http://localhost:8080/usuario/buscarUsuario/" + id))
-                .header("Content-Type", "application/json")
-                .GET()
-                .build();
-
-        HttpResponse<String> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
-        return response.body();
+    public ResponseEntity<String> consumirCriarUsuario(ChamarUsuarioRequest request) {
+        log.info("Calling usuario service: create user");
+        return forward(restClient.post().uri("/usuario/criarUsuario")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request));
     }
 
-    public String consumirDeletarUsuario(Long id) throws IOException, URISyntaxException, InterruptedException {
-        log.info("Chamando serviço deletar usuario");
-
-        HttpClient client = HttpClient.newHttpClient();
-        HttpRequest httpRequest = HttpRequest.newBuilder()
-                .uri(new URI("http://localhost:8080/usuario/deletarUsuario/" + id))
-                .header("Content-Type", "application/json")
-                .DELETE()
-                .build();
-
-        HttpResponse<String> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
-        return response.body();
+    public ResponseEntity<String> consumirBuscarUsuario(Long id) {
+        log.info("Calling usuario service: find user {}", id);
+        return forward(restClient.get().uri("/usuario/buscarUsuario/{id}", id));
     }
 
-    public String consumirAtualizarUsuario(Long id, ChamarUsuarioRequest request) throws IOException, InterruptedException, URISyntaxException {
-        log.info("Chamando serviço atualizar usuario");
+    public ResponseEntity<String> consumirAtualizarUsuario(Long id, ChamarUsuarioRequest request) {
+        log.info("Calling usuario service: update user {}", id);
+        return forward(restClient.put().uri("/usuario/atualizarUsuario/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request));
+    }
 
-        var mapper = new ObjectMapper();
-        var requestBody = mapper.writeValueAsString(request);
+    public ResponseEntity<String> consumirDeletarUsuario(Long id) {
+        log.info("Calling usuario service: delete user {}", id);
+        return forward(restClient.delete().uri("/usuario/deletarUsuario/{id}", id));
+    }
 
-        HttpClient client = HttpClient.newHttpClient();
-        HttpRequest httpRequest = HttpRequest.newBuilder()
-                .uri(new URI("http://localhost:8080/usuario/atualizarUsuario/" + id))
-                .header("Content-Type", "application/json")
-                .PUT(HttpRequest.BodyPublishers.ofString(requestBody))
-                .build();
+    // 4xx/5xx from the usuario service are passed through to our caller instead of being thrown.
+    private ResponseEntity<String> forward(RestClient.RequestHeadersSpec<?> request) {
+        ResponseEntity<String> response = request.retrieve()
+                .onStatus(status -> true, (req, res) -> { })
+                .toEntity(String.class);
 
-        HttpResponse<String> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
-        return response.body();
+        var forwarded = ResponseEntity.status(response.getStatusCode());
+        MediaType contentType = response.getHeaders().getContentType();
+        if (contentType != null) {
+            forwarded.contentType(contentType);
+        }
+        return forwarded.body(response.getBody());
     }
 }
