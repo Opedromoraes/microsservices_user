@@ -7,10 +7,11 @@ import com.criar.usuario.domain.mapper.UsuarioMapper;
 import com.criar.usuario.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Objects;
-import java.util.Optional;
 
 @Service
 @Slf4j
@@ -27,7 +28,7 @@ public class UsuarioService {
 
     public UsuarioDTO buscarUsuario(Long id) {
         Usuario usuario = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User " + id + " not found"));
         return mapper.entityToDTO(usuario);
     }
 
@@ -56,10 +57,8 @@ public class UsuarioService {
         repository.findByEmail(usuarioDTO.getEmail())
                 .ifPresent(usuario -> {
                     if (!Objects.equals(usuario.getId(), id)) {
-                        throw new RuntimeException("E-mail já cadastrado");
+                        throw new ResponseStatusException(HttpStatus.CONFLICT, "E-mail already registered");
                     }
                 });
     }
 }
-
-
